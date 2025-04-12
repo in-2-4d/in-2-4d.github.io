@@ -443,7 +443,7 @@ button {
       <!-- Animation. -->
       <div class="columns is-centered">
         <div class="column is-full-width">
-          <h2 class="title is-3">Animation</h2>
+          <h2 class="title is-3">4D Animation</h2>
 
           <!-- Interpolating. -->
           <h3 class="title is-4">Comparison to Baselines</h3>
@@ -491,7 +491,18 @@ button {
           
     
         <!-- Slider 2 -->
-        <div class="slider">
+        <div class="slider"> <section class="section">
+    <div class="container is-max-desktop">
+
+      <div class="columns is-centered">
+
+        <!-- Visual Effects. -->
+        <div class="column">
+          <div class="content">
+            <h2 class="title is-3">Top-Down Divide</h2>
+            <p>
+              We adaptively generate intermediate keyframes between input images using a hierarchical approach that detects rapid motion changes. This simplifies complex motion trajectories into quasi-static segments. A video interpolation module, guided by feature correspondence, selects keyframes.
+            </p>
             <div class="slides">
               <video autoplay controls muted loop playsinline width=100%">
                 <source src="./static/videos/mill_c2.mp4"
@@ -813,7 +824,7 @@ button {
             </div>
           </div>
         </div>
-      </section> -->
+      
         <!-- <section class="hero is-light is-small">
   <div class="hero-body">
     <div class="container">
@@ -902,6 +913,35 @@ button {
       </div> -->
       <!--/ Concurrent Work. -->
 
+    </div>
+  </section>
+ <section class="hero is-light is-small">
+    <br />
+    <br />
+    <div class="container is-max-desktop">
+      <!-- Abstract. -->
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3"><strong>Application</strong>: 4D Motion Editing</h2>
+          <p>
+            In contrast to most existing 4D generation methods that depend on
+            SDS, our approach improves controllability and motion diversity. While BLIP is used by default to extract
+            motion prompts, users can input custom prompts to generate 4D motions for the same initial and final state. As shown below, both jumping and walking motions of a
+            dog are synthesized under identical start and end conditions. Despite motion complexity, our bottom-up 3D optimization
+            ensures artifact-free novel view generation
+          </p>
+          <br/>
+          <br/>
+          <video poster="" id="coffee" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/application.mp4"
+                    type="video/mp4">
+                    type="video/mp4">
+          </video>
+          <br/>
+          <br/>
+          <br/>
+        </div>
+      </div>
     </div>
   </section>
 
