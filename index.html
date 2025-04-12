@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+    content="In-2-4D creates free-viewpoint videos from casually captured bust photos.">
+  <meta name="keywords" content="Gaussian Splatting, Video DIffusion, 4D Generation">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>In-2-4D: In-2-4D: Inbetweening from Two Single-View
+    Images to 4D Generation</title>
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script> -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+ <script>
+function moveSlide(direction, sliderIndex) {
+    const slides = document.querySelectorAll('.slider')[sliderIndex].querySelector('.slides');
+    const totalSlides = slides.children.length;
+    const currentTransform = getComputedStyle(slides).transform;
+    const currentIndex = currentTransform === 'none' ? 0 : Math.abs(parseInt(currentTransform.split(',')[4])) / slides.offsetWidth;
+
+    let newIndex = currentIndex + direction;
+    if (newIndex >= totalSlides) {
+        newIndex = 0;
+    } else if (newIndex < 0) {
+        newIndex = totalSlides - 1;
+    }
+
+    slides.style.transform = `translateX(-${newIndex * 100}%)`;
+}
+</script>
+<!-- <script>
+  let slideIndices = [1, 1]; // [carousel1, carousel2]
+  let slideIdSets = [["mySlides", "dot"], ["mySlides2", "dot2"]];
+
+  window.onload = function() {
+    showSlides(1, 0);
+    showSlides(1, 1);
+  };
+
+  function plusSlides(n, no) {
+    showSlides(slideIndices[no] += n, no);
+  }
+
+  function currentSlide(n, no) {
+    showSlides(slideIndices[no] = n, no);
+  }
+
+  function showSlides(n, no) {
+    let slides = document.getElementsByClassName(slideIdSets[no][0]);
+    let dots = document.getElementsByClassName(slideIdSets[no][1]);
+
+    if (n > slides.length) {slideIndices[no] = 1}    
+    if (n < 1) {slideIndices[no] = slides.length}
+
+    for (let i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";  
+    }
+
+    for (let i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "").replace(" active2", "");
+    }
+
+    slides[slideIndices[no]-1].style.display = "block";  
+    dots[slideIndices[no]-1].className += no === 0 ? " active" : " active2";
+  }
+</script> -->
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <!-- <link rel="icon" href="./static/images/favicon.svg"> -->
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <style>
+   /* Style for each slider */
+.slider {
+    position: relative;
+    width: 80%;
+    max-width: 900px;
+    margin: auto;
+    overflow: hidden;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+}
+
+/* Style for the slides container */
+.slides {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+}
+
+/* Style for individual slides */
+.slides img {
+    width: 100%;
+    height: auto;
+}
+
+/* Style for navigation buttons */
+button {
+    position: absolute;
+    top: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    z-index: 1;
+    font-size: 18px;
+    border-radius: 3px;
+}
+
+.prev {
+    left: 10px;
+}
+
+.next {
+    right: 10px;
+}
+    </style>
+</head>
+
+<body>
+
+  <!-- <nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+  <div class="navbar-menu">
+    <div class="navbar-start" style="flex-grow: 1; justify-content: center;">
+      <a class="navbar-item" href="https://keunhong.com">
+      <span class="icon">
+          <i class="fas fa-home"></i>
+      </span>
+      </a>
+
+      <div class="navbar-item has-dropdown is-hoverable">
+        <a class="navbar-link">
+          More Research
+        </a>
+        <div class="navbar-dropdown">
+          <a class="navbar-item" href="https://hypernerf.github.io">
+            HyperNeRF
+          </a>
+          <a class="navbar-item" href="https://nerfies.github.io">
+            Nerfies
+          </a>
+          <a class="navbar-item" href="https://latentfusion.github.io">
+            LatentFusion
+          </a>
+          <a class="navbar-item" href="https://photoshape.github.io">
+            PhotoShape
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</nav> -->
+
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title" style="font-size: 2.9rem;"><span style="font-weight:bold;color:#f7a24d">In-2-4D</span>: <span style="font-weight:bold;color:#f7a24d">In</span>betweening from <span style="font-weight:bold;color:#f7a24d">Two</span>
+              Single-View <br /> Images to <span style="font-weight:bold;color:#f7a24d">4D</span> Generation </h1>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="https://keunhong.com">Sauradip Nag</a><sup>1</sup>,</span>
+              <span class="author-block">
+                <a href="https://utkarshsinha.com">Daniel Cohen-Or</a><sup>2</sup>,</span>
+              <span class="author-block">
+                <a href="https://jonbarron.info">Hao (Richard) Zhang</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="http://sofienbouaziz.com">Ali Mahdavi-Amiri</a><sup>1</sup>,
+              </span>
+            </div>
+
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><sup>1</sup>Simon Fraser University, Canada</span>
+              <span class="author-block"><sup>2</sup>Tel Aviv University, Israel</span>
+            </div>
+
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <!-- PDF Link. -->
+                <span class="link-block">
+                <a href="https://arxiv.org/pdf/2011.12948"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+                <a href="https://youtu.be/w94fYWT-3VE?si=dWqGjTGmXT5D9-kx"
+                   class="external-link button is-normal is-rounded is-dark">
+                <span class="icon">
+                      <i class="fab fa-youtube"></i>
+                    </span>
+                    <span>Video</span>
+                  </a>
+                </span>
+                <!-- Code Link. -->
+                <span class="link-block">
+                <a href=""
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code (Coming Soon)</span>
+                  </a>
+              </span>
+                <!-- Dataset Link. -->
+                <span class="link-block">
+                  <a href="https://huggingface.co/datasets/sauradip/In-2-4D"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="far fa-images"></i>
+                    </span>
+                    <span>Dataset</span>
+                  </a>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="hero teaser">
+    <div class="container is-max-desktop">
+      <div class="hero-body">
+        <img src="static/images/website_teaser_crop_v2.gif">
+        <!-- <video id="teaser" autoplay muted loop playsinline height="100%">
+        
+      </video> -->
+        <br />
+        <br />
+        <h2 class="subtitle has-text-centered">
+          <span class="dnerf">In-2-4D</span> turns two burst-mode photos captured by your phone into
+          free-viewpoint Motion Videos.
+        </h2>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- <section class="hero is-light is-small">
+  <div class="hero-body">
+    <div class="container">
+      <div id="results-carousel" class="carousel results-carousel">
+        <div class="item item-steve">
+          <video poster="" id="steve" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/steve.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-chair-tp">
+          <video poster="" id="chair-tp" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/chair-tp.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-shiba">
+          <video poster="" id="shiba" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/shiba.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-fullbody">
+          <video poster="" id="fullbody" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/fullbody.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-blueshirt">
+          <video poster="" id="blueshirt" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/blueshirt.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-mask"><span class="dnerf">In-2-4D</span>
+          <video poster="" id="mask" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/mask.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-coffee">
+          <video poster="" id="coffee" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/coffee.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-toby">
+          <video poster="" id="toby" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/toby2.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+      </div>
+    </div>
+  </div>
+</section> -->
+
+
+  <section class="hero is-light is-small">
+    <br />
+    <br />
+    <div class="container is-max-desktop">
+      <!-- Abstract. -->
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+              We propose a new problem, In-2-4D, for generative 4D (i.e., 3D + motion) inbetweening from a minimalistic
+              input setting: two
+              single-view images capturing an object in two distinct motion states. Given two images representing the
+              start and end states of an object in motion, our goal is to generate and reconstruct the motion in 4D.
+            </p>
+            <p>
+              We utilize a video interpolation model to predict the motion, but large frame-to-frame motions can lead to
+              ambiguous interpretations. To overcome this, we employ a hierarchical approach to identify keyframes that
+              are visually close to the input states and show significant motion, then generate smooth fragments between
+              them. For each fragment, we construct the 3D representation of the keyframe using Gaussian Splatting. The
+              temporal frames within the fragment guide the motion, enabling their transformation into dynamic Gaussians
+              through a deformation field. To improve temporal consistency and refine 3D motion, we expand the
+              self-attention of multi-view diffusion across timesteps and apply rigid transformation regularization.
+              Finally, we merge the independently generated 3D motion segments by interpolating boundary deformation
+              fields and optimizing them to align with the guiding video, ensuring smooth and flicker-free transitions.
+            </p>
+            <br />
+            <br />
+            <!-- <p>
+            We show that <span class="dnerf">Nerfies</span> can turn casually captured selfie
+            photos/videos into deformable NeRF
+            models that allow for photorealistic renderings of the subject from arbitrary
+            viewpoints, which we dub <i>"nerfies"</i>. We evaluate our method by collecting data
+            using a
+            rig with two mobile phones that take time-synchronized photos, yielding train/validation
+            images of the same pose at different viewpoints. We show that our method faithfully
+            reconstructs non-rigidly deforming scenes and reproduces unseen views with high
+            fidelity.
+          </p> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!--/ Abstract. -->
+
+  <!-- Paper video. -->
+  <section class="section ">
+    <div class="container is-max-desktop">
+
+      <!-- <div class="columns is-centered"> -->
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Video</h2>
+          <div class="publication-video">
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/w94fYWT-3VE?si=dYhN6yNgl411ApFW"
+              title="YouTube video player" frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+      <!--/ Paper video. -->
+    </div>
+    </div>
+  </section>
+
+
+
+  <section class="section">
+    <div class="container is-max-desktop">
+
+      <div class="columns is-centered">
+
+        <!-- Visual Effects. -->
+        <div class="column">
+          <div class="content">
+            <h2 class="title is-3">Top-Down Divide</h2>
+            <p>
+              We adaptively generate intermediate keyframes between input images using a hierarchical approach that detects rapid motion changes. This simplifies complex motion trajectories into quasi-static segments. A video interpolation module, guided by feature correspondence, selects keyframes.
+            </p>
+            <img src="static/images/Hierarchy.gif">
+            <!-- <video id="dollyzoom" autoplay controls muted loop playsinline height="100%">
+              <source src="./static/videos/dollyzoom-stacked.mp4" type="video/mp4">
+            </video> -->
+          </div>
+        </div>
+        <!--/ Visual Effects. -->
+
+        <!-- Matting. -->
+        <div class="column">
+          <h2 class="title is-3">Bottom-Up Merge</h2>
+          <div class="columns is-centered">
+            <div class="column content">
+              <p>
+                We utilize the keyframes to generate quasi-static motions using video diffusion model. We then lift them to 4D
+                using multi-view diffusion with piece-wise rigid assumptions to form 4D fragments where geometry is clean. We 
+                then merge these independent generations into our final 4D video.
+              </p>
+              <img src="static/images/bottom_up_merge.gif">
+              <!-- <video id="matting-video" controls playsinline height="100%">
+                <source src="./static/videos/matting.mp4" type="video/mp4">
+              </video> -->
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <!--/ Matting. -->
+<br/>
+      <!-- Animation. -->
+      <div class="columns is-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3">Animation</h2>
+
+          <!-- Interpolating. -->
+          <h3 class="title is-4">Comparison to Baselines</h3>
+          <div class="content has-text-justified">
+            <p>
+              We compare our approach with baseline methods. All the baselines are based on latest Video Interpolation and Video-to-4D Generation models. Our method shows more consistent and flickerfree motions
+            </p>
+          </div>
+  
+          <div class="slider">
+            <div class="slides">
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/rose.mp4"
+                        type="video/mp4">
+              </video>
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/tfan.mp4"
+                        type="video/mp4">
+              </video>
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/umbrella.mp4"
+                        type="video/mp4">
+              </video>
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/egg.mp4"
+                        type="video/mp4">
+              </video>
+            </div>
+            <button class="prev" onclick="moveSlide(-1, 0)">❮</button>
+            <button class="next" onclick="moveSlide(1, 0)">❯</button>
+        </div>
+
+          
+          <br />
+          <!--/ Interpolating. -->
+
+          <!-- Re-rendering. -->
+          <h3 class="title is-4">Generation Gallery</h3>
+          <div class="content has-text-justified">
+            <p>
+              We show novel-view generations of complex motion categories using our <span class="dnerf">In-2-4D</span> method.
+            </p>
+          </div>
+
+          
+    
+        <!-- Slider 2 -->
+        <div class="slider">
+            <div class="slides">
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/mill_c2.mp4"
+                        type="video/mp4">
+              </video>
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/robot_Arm_c2.mp4"
+                        type="video/mp4">
+              </video>
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/skate_c2.mp4"
+                        type="video/mp4">
+              </video>
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/racoon_c2.mp4"
+                        type="video/mp4">
+              </video>
+              <video autoplay controls muted loop playsinline width=100%">
+                <source src="./static/videos/angel_c2.mp4"
+                        type="video/mp4">
+              </video>
+            </div>
+            <button class="prev" onclick="moveSlide(-1, 1)">❮</button>
+            <button class="next" onclick="moveSlide(1, 1)">❯</button>
+        </div>
+
+        </div>
+      </div>
+      
+          <!-- <div class="content has-text-centered">
+            <video id="replay-video" controls muted preload playsinline width="75%">
+              <source src="./static/videos/replay.mp4" type="video/mp4">
+            </video>
+          </div> -->
+          <!--/ Re-rendering. -->
+          
+      <!--/ Animation. -->
+      <!-- <section class="hero is-light is-small">
+        <div class="hero-body">
+          <div class="container">
+            <div id="results-carousel" class="carousel results-carousel">
+              <div class="item item-steve">
+                <video poster="" id="steve" autoplay controls muted loop playsinline width=100%">
+                  <source src="./static/videos/egg.mp4"
+                          type="video/mp4">
+                </video>
+              </div>
+              <div class="item item-chair-tp">
+                <video poster="" id="chair-tp" autoplay controls muted loop playsinline">
+                  <source src="./static/videos/rose.mp4"
+                          type="video/mp4">
+                </video>
+              </div>
+              <div class="item item-shiba">
+                <video poster="" id="shiba" autoplay controls muted loop playsinline">
+                  <source src="./static/videos/tfan.mp4"  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+ <script>
+  let slideIndex = 1;
+  let slideIndex2 = 1;
+
+  function plusSlides2(n) {  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+ <script>
+  let slideIndex = 1;
+  let slideIndex2 = 1;
+
+  function plusSlides2(n) {
+    showSlides2(slideIndex2 += n);
+  }
+
+  function currentSlide2(n) {
+    showSlides2(slideIndex2 = n);
+  }
+
+  function plusSlides(n) {
+    showSlides(slideIndex += n);
+  }
+
+  function currentSlide(n) {
+    showSlides(slideIndex = n);
+  }
+
+  function showSlides(n) {
+    let i;
+    let slides = document.getElementsByClassName("mySlides");
+    let dots = document.getElementsByClassName("dot");
+    if (n > slides.length) {slideIndex = 1}    
+    if (n < 1) {slideIndex = slides.length}
+    for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";    <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+ <script>
+  let slideIndex = 1;
+  let slideIndex2 = 1;
+
+  function plusSlides2(n) {
+    showSlides2(slideIndex2 += n);
+  }
+
+  function currentSlide2(n) {
+    showSlides2(slideIndex2 = n);
+  }
+
+  function plusSlides(n) {
+    showSlides(slideIndex += n);
+  }
+
+  function currentSlide(n) {
+    showSlides(slideIndex = n);
+  }
+
+  function showSlides(n) {
+    let i;
+    let slides = document.getElementsByClassName("mySlides");
+    let dots = document.getElementsByClassName("dot");
+    if (n > slides.length) {slideIndex = 1}    
+    if (n < 1) {slideIndex = slides.length}
+    for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";  
+    }
+    for (i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "");
+    }
+    slides[slideIndex-1].style.display = "block";  
+    dots[slideIndex-1].className += " active";
+  }
+
+  function showSlides2(n) {
+    let i;
+    let slides = document.getElementsByClassName("mySlides");
+    let dots = document.getElementsByClassName("dot");
+    if (n > slides.length) {slideIndex2 = 1}    
+    if (n < 1) {slideIndex2 = slides.length}
+    for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";  
+    }
+    for (i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "");
+    }
+    slides[slideIndex2-1].style.display = "block";  
+    dots[slideIndex2-1].className += " active";
+  }
+
+
+  window.onload = function() {
+    showSlides(slideIndex);
+  };
+  window.onload = function() {
+    showSlides2(slideIndex2);
+  };
+</script>
+    }
+    for (i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "");
+    }
+    slides[slideIndex-1].style.display = "block";  
+    dots[slideIndex-1].className += " active";
+  }
+
+  function showSlides2(n) {
+    let i;
+    let slides = document.getElementsByClassName("mySlides");
+    let dots = document.getElementsByClassName("dot");
+    if (n > slides.length) {slideIndex2 = 1}    
+    if (n < 1) {slideIndex2 = slides.length}
+    for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";  
+    }
+    for (i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "");
+    }
+    slides[slideIndex2-1].style.display = "block";  
+    dots[slideIndex2-1].className += " active";
+  }
+
+
+  window.onload = function() {
+    showSlides(slideIndex);
+  };
+  window.onload = function() {
+    showSlides2(slideIndex2);
+  };
+</script>
+    showSlides2(slideIndex2 += n);
+  }
+
+  function currentSlide2(n) {
+    showSlides2(slideIndex2 = n);
+  }
+
+  function plusSlides(n) {
+    showSlides(slideIndex += n);
+  }
+
+  function currentSlide(n) {
+    showSlides(slideIndex = n);
+  }
+
+  function showSlides(n) {
+    let i;
+    let slides = document.getElementsByClassName("mySlides");
+    let dots = document.getElementsByClassName("dot");
+    if (n > slides.length) {slideIndex = 1}    
+    if (n < 1) {slideIndex = slides.length}
+    for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";  
+    }
+    for (i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "");
+    }
+    slides[slideIndex-1].style.display = "block";  
+    dots[slideIndex-1].className += " active";
+  }
+
+  function showSlides2(n) {
+    let i;
+    let slides = document.getElementsByClassName("mySlides");
+    let dots = document.getElementsByClassName("dot");
+    if (n > slides.length) {slideIndex2 = 1}    
+    if (n < 1) {slideIndex2 = slides.length}
+    for (i = 0; i < slides.length; i++) {
+      slides[i].style.display = "none";  
+    }
+    for (i = 0; i < dots.length; i++) {
+      dots[i].className = dots[i].className.replace(" active", "");
+    }
+    slides[slideIndex2-1].style.display = "block";  
+    dots[slideIndex2-1].className += " active";
+  }
+
+
+  window.onload = function() {
+    showSlides(slideIndex);
+  };
+  window.onload = function() {
+    showSlides2(slideIndex2);
+  };
+</script>
+                          type="video/mp4">
+                </video>
+              </div>
+              <div class="item item-fullbody">
+                <video poster="" id="fullbody" autoplay controls muted loop playsinline">
+                  <source src="./static/videos/umbrella.mp4"
+                          type="video/mp4">
+                </video>
+              </div>
+              <!-- <div class="item item-blueshirt">
+                <video poster="" id="blueshirt" autoplay controls muted loop playsinline height="100%">
+                  <source src="./static/videos/blueshirt.mp4"
+                          type="video/mp4">
+                </video>
+              </div>
+              <div class="item item-mask">
+                <video poster="" id="mask" autoplay controls muted loop playsinline height="100%">
+                  <source src="./static/videos/mask.mp4"
+                          type="video/mp4">
+                </video>
+              </div>
+              <div class="item item-coffee">
+                <video poster="" id="coffee" autoplay controls muted loop playsinline height="100%">
+                  <source src="./static/videos/coffee.mp4"
+                          type="video/mp4">
+                          type="video/mp4">
+                </video>
+              </div> -->
+            </div>
+          </div>
+        </div>
+      </section> -->
+        <!-- <section class="hero is-light is-small">
+  <div class="hero-body">
+    <div class="container">
+      <div id="results-carousel" class="carousel results-carousel">
+        <div class="item item-steve">
+          <video poster="" id="steve" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/steve.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-chair-tp">
+          <video poster="" id="chair-tp" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/chair-tp.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-shiba">
+          <video poster="" id="shiba" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/shiba.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-fullbody">
+          <video poster="" id="fullbody" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/fullbody.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-blueshirt">
+          <video poster="" id="blueshirt" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/blueshirt.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-mask">
+          <video poster="" id="mask" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/mask.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-coffee">
+          <video poster="" id="coffee" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/coffee.mp4"
+                    type="video/mp4">
+                    type="video/mp4">
+          </video>
+        </div>
+      </div>
+    </div>
+  </div>
+</section> -->
+
+
+
+      <!-- Concurrent Work. -->
+      <!-- <div class="columns is-centered">
+        <div class="column is-full-width">
+          <h2 class="title is-3">Related Links</h2>
+
+          <div class="content has-text-justified">
+            <p>
+              There's a lot of excellent work that was introduced around the same time as ours.
+            </p>
+            <p>
+              <a href="https://arxiv.org/abs/2104.09125">Progressive Encoding for Neural Optimization</a> introduces an
+              idea similar to our windowed position encoding for coarse-to-fine optimization.
+            </p>
+            <p>
+              <a href="https://www.albertpumarola.com/research/D-NeRF/index.html">D-NeRF</a> and <a
+                href="https://gvv.mpi-inf.mpg.de/projects/nonrigid_nerf/">NR-NeRF</a>
+              both use deformation fields to model non-rigid scenes.
+            </p>
+            <p>
+              Some works model videos with a NeRF by directly modulating the density, such as <a
+                href="https://video-nerf.github.io/">Video-NeRF</a>, <a
+                href="https://www.cs.cornell.edu/~zl548/NSFF/">NSFF</a>, and <a
+                href="https://neural-3d-video.github.io/">DyNeRF</a>
+            </p>
+            <p>
+              There are probably many more by the time you are reading this. Check out <a
+                href="https://dellaert.github.io/NeRF/">Frank Dellart's survey on recent NeRF papers</a>, and <a
+                href="https://github.com/yenchenlin/awesome-NeRF">Yen-Chen Lin's curated list of NeRF papers</a>.
+            </p>
+          </div>
+        </div>
+      </div> -->
+      <!--/ Concurrent Work. -->
+
+    </div>
+  </section>
+
+
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>@article{nag2025in24d,
+  author    = {Nag, Sauradip and Cohen-Or, Daneil and Zhang, Hao. and Mahdavi-Amiri, Ali},
+  title     = {In-2-4D: Inbetweening from Two Single View Images to 4D Generation},
+  journal   = {Arxiv},
+  year      = {2025},
+}</code></pre>
+    </div>
+  </section>
+
+
+  <footer class="footer">
+    <div class="container">
+      <center class="noclick">
+        <a href='https://clustrmaps.com/site/1c5hn'  title='Visit tracker'><img src='//www.clustrmaps.com/map_v2.js?d=Pzkk_DAU08KnvVZuvIV-z_ob0AhTo0ekZPvOkMj1rGo&cl=ffffff&w=a' width="0.00001" height="0.00001"/></a>
+      </center>
+      <!-- <script type="text/javascript" id="clustrmaps" src="//www.clustrmaps.com/map_v2.js?d=Pzkk_DAU08KnvVZuvIV-z_ob0AhTo0ekZPvOkMj1rGo&cl=ffffff&w=a"></script> -->
+    </div>
+  </footer>
+
+</body>
+
+</html>
